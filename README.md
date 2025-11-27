@@ -62,6 +62,17 @@ Add new internal documentation by placing a Markdown file in `docs/` and referen
 
 Original source PDFs should be placed in the `pdfs/` folder (legacy format: 1 PDF page = 1 content unit) or the newer `pdfs_updated/` folder (updated format: 2 consecutive PDF pages = 1 logical scene). After processing, structured outputs go into `extracted/{pdf_name}/`. Keeping originals in their respective input folders preserves a clean audit trail and allows re-runs without mixing inputs and generated artifacts.
 
+### Large PDFs via Git LFS
+
+This repository uses Git Large File Storage (LFS) to track PDF assets under `pdfs/`. Before cloning or pulling, ensure Git LFS is installed so actual files are fetched instead of pointer stubs:
+
+```bash
+brew install git-lfs
+git lfs install
+```
+
+New large PDFs placed in `pdfs/` are automatically tracked by LFS via `.gitattributes`.
+
 ### Updated PDF Format (`pdfs_updated/`) – Paired Page Scenes
 
 There is now an explicit `--pdf_format` switch in `extract_pdfs.py` controlling how pages map to output units:
