@@ -1,0 +1,63 @@
+# PDF completion state (user-specific)
+.pdf_completion_state.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.envrc
+.env.local
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+*.bak
+
+# Virtual environments
+.venv/
+
+# Generated workflow outputs & heavy inputs
+extracted/
+spare_images/
+installed_libraries.txt
+pdfs/
+pdfs_updated/
+
+# Media artifacts (avoid committing large binaries)
+*.mp4
+*.mp3
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Cache directories
+cache/
