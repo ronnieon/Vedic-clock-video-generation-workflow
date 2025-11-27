@@ -43,7 +43,8 @@ def get_workflow_status(pdf_stem: str) -> Dict:
     
     # Check extraction
     if extraction_dir.exists():
-        page_dirs = sorted([d for d in extraction_dir.iterdir() if d.is_dir() and d.name.startswith('page_')])
+        # Support both legacy page_XXXX and updated scene_XXXX units
+        page_dirs = get_page_directories(pdf_stem)
         
         if len(page_dirs) > 0:
             status['extracted']['complete'] = True
@@ -52,7 +53,7 @@ def get_workflow_status(pdf_stem: str) -> Dict:
             status['extracted']['present'] = [str(p) for p in page_dirs]
             
             # Check story planning (clean_text.txt in each page)
-            status['planned']['total'] = len(page_dirs) + 1  # pages + whole_story file
+            status['planned']['total'] = len(page_dirs) + 1  # units + whole_story file
             story_file = extraction_dir / 'whole_story_cleaned.txt'
             
             if story_file.exists():
@@ -71,7 +72,7 @@ def get_workflow_status(pdf_stem: str) -> Dict:
             
             status['planned']['complete'] = status['planned']['done'] == status['planned']['total']
             
-            # Check rewriting (versioned final_text files)
+            # Check rewriting (versioned final_text files) across units (page or scene)
             # First pass: migrate legacy files and find max version across text AND audio
             for page_dir in page_dirs:
                 migrate_legacy_files(page_dir)
@@ -89,7 +90,7 @@ def get_workflow_status(pdf_stem: str) -> Dict:
             
             # Expected version is the max version found across all assets
             status['rewritten']['expected_version'] = status['rewritten']['max_version']
-            status['rewritten']['total'] = len(page_dirs) * 2  # EN + HI for each page
+            status['rewritten']['total'] = len(page_dirs) * 2  # EN + HI per unit
             
             # Second pass: check if all files are at expected version
             for page_dir in page_dirs:
@@ -122,7 +123,7 @@ def get_workflow_status(pdf_stem: str) -> Dict:
             
             # Check audio generation (versioned audio files)
             # Find max version across BOTH text and audio (audio can be ahead)
-            status['audio_generated']['total'] = len(page_dirs) * 2  # EN + HI audio
+            status['audio_generated']['total'] = len(page_dirs) * 2  # EN + HI audio per unit
             
             # First pass: find max audio version AND consider text version
             for page_dir in page_dirs:
@@ -169,9 +170,9 @@ def get_workflow_status(pdf_stem: str) -> Dict:
             
             status['audio_generated']['complete'] = status['audio_generated']['done'] == status['audio_generated']['total']
             
-            # Check page videos (image + audio combined per page)
+            # Check page/scene videos (image + audio combined per unit)
             # Find max version across text, audio, AND videos
-            status['page_videos']['total'] = len(page_dirs) * 2  # EN + HI video per page
+            status['page_videos']['total'] = len(page_dirs) * 2  # EN + HI video per unit
             
             # First pass: find max across all assets
             for page_dir in page_dirs:
