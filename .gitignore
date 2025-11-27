@@ -47,17 +47,6 @@ tmp/
 extracted/
 spare_images/
 installed_libraries.txt
-pdfs/
-pdfs_updated/
-
-# Media artifacts (avoid committing large binaries)
-*.mp4
-*.mp3
-*.wav
-*.png
-*.jpg
-*.jpeg
-*.webp
 
 # Cache directories
 cache/
