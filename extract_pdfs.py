@@ -78,7 +78,7 @@ def _ocr_with_tesseract_cli(pil_img: Image.Image, debug_path: Path | None = None
         return ""
 
 
-def extract_page_text(page: fitz.Page, page_dir: Path, debug: bool = False) -> str:
+def extract_page_text(page: fitz.Page, page_dir: Path, debug: bool = False, ocr_crop: Optional[Tuple[int, int, int, int]] = None) -> str:
     """Extract text from a page.
 
     1) Try embedded text via PyMuPDF
@@ -88,6 +88,33 @@ def extract_page_text(page: fitz.Page, page_dir: Path, debug: bool = False) -> s
     # Try both PyMuPDF API variants for compatibility
     # Use PyMuPDF legacy API for compatibility
     text = page.get_text("text") or ""
+    # If a crop is provided (legacy spread), attempt spatially filtered embedded text
+    if ocr_crop is not None:
+        try:
+            x0c, y0c, x1c, y1c = ocr_crop
+            blocks = page.get_text("blocks") or []
+            filtered_parts: list[str] = []
+            for blk in blocks:
+                # blk: (x0, y0, x1, y1, text, block_no, ...)
+                if len(blk) >= 5:
+                    x0, y0, x1, y1, btext = blk[:5]
+                    try:
+                        fx0 = float(x0)
+                        fx1 = float(x1)
+                        cx0 = float(x0c)
+                        cx1 = float(x1c)
+                    except Exception:
+                        continue
+                    overlap = max(0.0, min(cx1, fx1) - max(cx0, fx0))
+                    width = max(1.0, fx1 - fx0)
+                    if overlap / width > 0.5:
+                        filtered_parts.append(str(btext))
+            filtered_text = "\n".join(p.strip() for p in filtered_parts if p and str(p).strip())
+            if filtered_text.strip():
+                return filtered_text
+        except Exception:
+            pass
+    # Otherwise, if embedded text exists, return it
     if text.strip():
         return text
 
@@ -104,6 +131,13 @@ def extract_page_text(page: fitz.Page, page_dir: Path, debug: bool = False) -> s
         pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
         from PIL import Image, ImageOps, ImageFilter
         img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        # Optionally crop the image (for legacy spread half-page OCR)
+        if ocr_crop is not None:
+            x0, y0, x1, y1 = ocr_crop
+            try:
+                img = img.crop((x0, y0, x1, y1))
+            except Exception:
+                pass
         # Basic preprocessing: grayscale -> increase contrast -> slight sharpen -> binary
         gray = ImageOps.grayscale(img)
         enhanced = ImageOps.autocontrast(gray, cutoff=2)
@@ -361,7 +395,23 @@ def process_pdf(pdf_path: Path, out_root: Path, force: bool = False, debug: bool
                 pages_done += 1
                 continue
 
-            text = extract_page_text(page, page_dir, debug=debug)
+            # For legacy spread layout, OCR only the logical half to avoid mixing two pages
+            ocr_crop = None
+            if layout_mode in ("spread", "legacy_spread"):
+                try:
+                    # Determine crop box based on rendered size
+                    test_pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    width, height = test_pix.width, test_pix.height
+                    mid = width // 2
+                    if (i + 1) == 1:
+                        # First logical page on right half
+                        ocr_crop = (mid, 0, width, height)
+                    else:
+                        # Subsequent logical pages on left half
+                        ocr_crop = (0, 0, mid, height)
+                except Exception:
+                    ocr_crop = None
+            text = extract_page_text(page, page_dir, debug=debug, ocr_crop=ocr_crop)
             (page_dir / "text.txt").write_text(text, encoding="utf-8")
 
             if debug:
