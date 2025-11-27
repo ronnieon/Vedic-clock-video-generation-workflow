@@ -210,6 +210,51 @@ The sidebar shows real-time status for:
 - Check disk space for video output
 - Verify moviepy and ffmpeg are installed correctly
 
+## 🧪 OCR & Deployment
+
+Scanned (image-only) PDFs require OCR fallback. The pipeline first tries embedded text via PyMuPDF; if none found it uses Tesseract + Pillow. If your deployment is not extracting text from legacy image PDFs, ensure these are present:
+
+| Component  | Purpose                | Verification Command |
+|------------|------------------------|----------------------|
+| tesseract  | OCR engine             | `which tesseract` / `tesseract --version` |
+| tessdata (eng)| Language data       | Usually installed with package; check `echo $TESSDATA_PREFIX` |
+| Pillow     | Image preprocessing    | `python -c "import PIL; print(PIL.__version__)"` |
+| PyMuPDF    | Embedded text extraction| `python -c "import fitz; print(fitz.__version__)"` |
+
+### macOS Setup
+```bash
+brew install tesseract
+pip install -r requirements.txt
+```
+
+### Debian/Ubuntu Setup
+```bash
+apt-get update && apt-get install -y --no-install-recommends \
+   tesseract-ocr tesseract-ocr-eng libjpeg-dev zlib1g-dev libpng-dev ffmpeg
+pip install -r requirements.txt
+```
+
+### Docker Build (Includes Tesseract)
+```bash
+docker build -t vedic-workflow .
+docker run --rm -p 8501:8501 vedic-workflow streamlit run app.py
+```
+
+### Environment Verification
+Run the helper script added to `scripts/`:
+```bash
+python scripts/verify_ocr_env.py
+```
+
+If `tesseract` is missing the script prints install guidance. The extraction code silently skips OCR when either Tesseract or Pillow is unavailable.
+
+### Common OCR Issues
+- Blank text: Tesseract missing or no embedded text and OCR skipped.
+- Garbled output: Try different page segmentation mode (`--psm`), adjust contrast (would require code change).
+- Slow extraction: Large DPI rendering; current code uses default PyMuPDF render settings.
+
+For non-English OCR add language packs (e.g. Hindi: `tesseract-ocr-hin`) and adapt invocation (would require code change).
+
 ## 📝 Best Practices
 
 1. **Complete stages in order** for best results
