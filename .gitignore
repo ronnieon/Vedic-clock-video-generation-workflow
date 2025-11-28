@@ -45,7 +45,9 @@ tmp/
 
 # Generated workflow outputs & heavy inputs
 extracted/
+pdfs/
 spare_images/
+.streamlit/
 installed_libraries.txt
 
 # Cache directories
