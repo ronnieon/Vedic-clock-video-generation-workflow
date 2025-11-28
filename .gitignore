@@ -44,6 +44,7 @@ tmp/
 .venv/
 
 # Generated workflow outputs & heavy inputs
+extracted/
 spare_images/
 .streamlit/
 installed_libraries.txt

@@ -30,7 +30,7 @@ from utils.logger import logger
 
 
 def get_all_page_directories(extracted_dir: Path = Path("extracted")) -> List[Path]:
-    """Get all page directories across all PDFs."""
+    """Get all scene directories across all PDFs. LEGACY FORMAT DISABLED."""
     page_dirs = []
     
     if not extracted_dir.exists():
@@ -38,9 +38,13 @@ def get_all_page_directories(extracted_dir: Path = Path("extracted")) -> List[Pa
     
     for pdf_dir in extracted_dir.iterdir():
         if pdf_dir.is_dir():
-            for page_dir in pdf_dir.iterdir():
-                if page_dir.is_dir() and page_dir.name.startswith('page_'):
-                    page_dirs.append(page_dir)
+            # LEGACY FORMAT DISABLED - Only collect scene_ dirs
+            # for page_dir in pdf_dir.iterdir():
+            #     if page_dir.is_dir() and page_dir.name.startswith('page_'):
+            #         page_dirs.append(page_dir)
+            for scene_dir in pdf_dir.iterdir():
+                if scene_dir.is_dir() and scene_dir.name.startswith('scene_'):
+                    page_dirs.append(scene_dir)
     
     return sorted(page_dirs)
 

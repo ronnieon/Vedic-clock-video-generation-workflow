@@ -44,9 +44,11 @@ except Exception:
     genai = None
 
 
-PAGE_DIR_PREFIX = "page_"  # legacy prefix
+# LEGACY FORMAT DISABLED - Only using updated scene-based format
+# PAGE_DIR_PREFIX = "page_"  # legacy prefix
 SCENE_DIR_PREFIX = "scene_"  # updated paired-page prefix
-DIR_PREFIXES = (PAGE_DIR_PREFIX, SCENE_DIR_PREFIX)
+# DIR_PREFIXES = (PAGE_DIR_PREFIX, SCENE_DIR_PREFIX)
+DIR_PREFIXES = (SCENE_DIR_PREFIX,)  # Only scene dirs now
 PAGE_TEXT_FILENAME = "text.txt"
 PAGE_CLEAN_FILENAME = "clean_text.txt"
 WHOLE_STORY_FILENAME = "whole_story_cleaned.txt"
@@ -81,10 +83,12 @@ def list_pages(pdf_dir: Path) -> List[PageItem]:
     for child in sorted(pdf_dir.iterdir()):
         if child.is_dir() and any(child.name.startswith(pref) for pref in DIR_PREFIXES):
             # Determine numeric part after prefix
-            if child.name.startswith(PAGE_DIR_PREFIX):
-                num_str = child.name[len(PAGE_DIR_PREFIX):]
-            else:
-                num_str = child.name[len(SCENE_DIR_PREFIX):]
+            # LEGACY FORMAT DISABLED - Only handle scene_ dirs
+            # if child.name.startswith(PAGE_DIR_PREFIX):
+            #     num_str = child.name[len(PAGE_DIR_PREFIX):]
+            # else:
+            #     num_str = child.name[len(SCENE_DIR_PREFIX):]
+            num_str = child.name[len(SCENE_DIR_PREFIX):]
             try:
                 idx = int(num_str)
             except ValueError:

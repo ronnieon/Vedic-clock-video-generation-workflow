@@ -294,11 +294,12 @@ def _save_image_for_scene(doc: fitz.Document, page: fitz.Page, scene_dir: Path, 
         return None
 
 
-def process_pdf(pdf_path: Path, out_root: Path, force: bool = False, debug: bool = False, no_images: bool = False, layout_mode: str = "auto", pdf_format: str = "old") -> Tuple[int, int]:
+def process_pdf(pdf_path: Path, out_root: Path, force: bool = False, debug: bool = False, no_images: bool = False, layout_mode: str = "auto", pdf_format: str = "updated") -> Tuple[int, int]:
     """Process a single PDF. Returns (units_processed, images_extracted).
 
     pdf_format:
-      old      -> legacy behavior: each PDF page becomes its own directory `page_XXXX`.
+      # LEGACY FORMAT COMMENTED OUT - only using updated format
+      # old      -> legacy behavior: each PDF page becomes its own directory `page_XXXX`.
       updated  -> paired-page behavior: two consecutive PDF pages become one scene directory `scene_XXXX`.
 
     When in updated mode:
@@ -306,7 +307,7 @@ def process_pdf(pdf_path: Path, out_root: Path, force: bool = False, debug: bool
       - image comes from second page in the pair
       - if the PDF has an odd number of pages, the last scene will use the last page for both text and image (fallback)
 
-    layout_mode (legacy single-page mode only) controls page image post-processing.
+    # layout_mode (legacy single-page mode only) controls page image post-processing.
     """
     pdf_name = pdf_path.stem
     pdf_out_dir = out_root / pdf_name
@@ -383,59 +384,60 @@ def process_pdf(pdf_path: Path, out_root: Path, force: bool = False, debug: bool
             scene_done_flag.write_text("ok")
             pages_done += 1
             scene_index += 1
-    else:
-        # Legacy single-page mode
-        for i in range(doc.page_count):
-            page = doc.load_page(i)
-            page_dir = pdf_out_dir / f"page_{i + 1:04d}"
-            ensure_dir(page_dir)
-
-            page_done_flag = page_dir / "done.flag"
-            if page_done_flag.exists() and not force:
-                pages_done += 1
-                continue
-
-            # For legacy spread layout, OCR only the logical half to avoid mixing two pages
-            ocr_crop = None
-            if layout_mode in ("spread", "legacy_spread"):
-                try:
-                    # Determine crop box based on rendered size
-                    test_pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                    width, height = test_pix.width, test_pix.height
-                    mid = width // 2
-                    if (i + 1) == 1:
-                        # First logical page on right half
-                        ocr_crop = (mid, 0, width, height)
-                    else:
-                        # Subsequent logical pages on left half
-                        ocr_crop = (0, 0, mid, height)
-                except Exception:
-                    ocr_crop = None
-            text = extract_page_text(page, page_dir, debug=debug, ocr_crop=ocr_crop)
-            (page_dir / "text.txt").write_text(text, encoding="utf-8")
-
-            if debug:
-                preview = (text or "").strip().replace("\n", " ")
-                if len(preview) > 200:
-                    preview = preview[:200] + "..."
-                print(f"    Page {i + 1}: text_chars={len(text)} preview=\"{preview}\"")
-
-            img_count = 0
-            if not no_images:
-                img_count = extract_page_images(doc, page, page_dir)
-                total_images += img_count
-                render_page_png(page, page_dir)
-                save_primary_image_for_layout(page_dir, i + 1, layout_mode)
-
-            page_summary = {
-                "page_index": i,
-                "page_number": i + 1,
-                "text_chars": len(text),
-                "images": img_count,
-            }
-            (page_dir / "summary.json").write_text(json.dumps(page_summary, indent=2))
-            page_done_flag.write_text("ok")
-            pages_done += 1
+    # LEGACY FORMAT DISABLED - Old single-page mode commented out
+    # else:
+    #     # Legacy single-page mode
+    #     for i in range(doc.page_count):
+    #         page = doc.load_page(i)
+    #         page_dir = pdf_out_dir / f"page_{i + 1:04d}"
+    #         ensure_dir(page_dir)
+    # 
+    #         page_done_flag = page_dir / "done.flag"
+    #         if page_done_flag.exists() and not force:
+    #             pages_done += 1
+    #             continue
+    # 
+    #         # For legacy spread layout, OCR only the logical half to avoid mixing two pages
+    #         ocr_crop = None
+    #         if layout_mode in ("spread", "legacy_spread"):
+    #             try:
+    #                 # Determine crop box based on rendered size
+    #                 test_pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+    #                 width, height = test_pix.width, test_pix.height
+    #                 mid = width // 2
+    #                 if (i + 1) == 1:
+    #                     # First logical page on right half
+    #                     ocr_crop = (mid, 0, width, height)
+    #                 else:
+    #                     # Subsequent logical pages on left half
+    #                     ocr_crop = (0, 0, mid, height)
+    #             except Exception:
+    #                 ocr_crop = None
+    #         text = extract_page_text(page, page_dir, debug=debug, ocr_crop=ocr_crop)
+    #         (page_dir / "text.txt").write_text(text, encoding="utf-8")
+    # 
+    #         if debug:
+    #             preview = (text or "").strip().replace("\n", " ")
+    #             if len(preview) > 200:
+    #                 preview = preview[:200] + "..."
+    #             print(f"    Page {i + 1}: text_chars={len(text)} preview=\"{preview}\"")
+    # 
+    #         img_count = 0
+    #         if not no_images:
+    #             img_count = extract_page_images(doc, page, page_dir)
+    #             total_images += img_count
+    #             render_page_png(page, page_dir)
+    #             save_primary_image_for_layout(page_dir, i + 1, layout_mode)
+    # 
+    #         page_summary = {
+    #             "page_index": i,
+    #             "page_number": i + 1,
+    #             "text_chars": len(text),
+    #             "images": img_count,
+    #         }
+    #         (page_dir / "summary.json").write_text(json.dumps(page_summary, indent=2))
+    #         page_done_flag.write_text("ok")
+    #         pages_done += 1
 
     # Mark PDF done
     completed_flag.write_text("ok")
@@ -452,8 +454,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--debug", action="store_true", help="Print per-page extraction details and OCR diagnostics")
     parser.add_argument("--only", type=str, default="", help="Only process PDFs whose filename contains this substring")
     parser.add_argument("--no_images", action="store_true", help="Skip extracting embedded images (faster)")
-    parser.add_argument("--layout_mode", choices=["auto", "spread", "legacy_spread", "single"], default="auto", help="Page image post-processing mode (legacy single-page mode only).")
-    parser.add_argument("--pdf_format", choices=["old", "updated"], default="old", help="PDF format: 'old' (1 page = 1 scene), 'updated' (2 pages = 1 scene).")
+    # LEGACY FORMAT DISABLED: Only using updated format (scene-based) going forward
+    # parser.add_argument("--layout_mode", choices=["auto", "spread", "legacy_spread", "single"], default="auto", help="Page image post-processing mode (legacy single-page mode only).")
+    parser.add_argument("--pdf_format", choices=["updated"], default="updated", help="PDF format: 'updated' (2 pages = 1 scene).")
+    # Legacy 'old' format removed from choices - was: choices=["old", "updated"], default="old"
     args = parser.parse_args(argv)
 
     input_dir: Path = args.input_dir.resolve()

@@ -30,19 +30,21 @@ from utils.versioning import create_new_version, get_version_count, migrate_lega
 # ============================================================================
 
 def render_extraction_stage(pdf_path: Path, pdf_stem: str):
-    """Render the extraction stage UI with format selection (old vs updated)."""
+    """Render the extraction stage UI. LEGACY FORMAT DISABLED - only updated format supported."""
     st.subheader("Step 1: Extract Content")
-    st.write("Extract text and images from the PDF")
+    st.write("Extract text and images from the PDF (scene-based: 2 pages = 1 scene)")
+    
+    # LEGACY FORMAT DISABLED - Force updated format only
     format_key = f"{pdf_stem}_pdf_format"
-    if format_key not in st.session_state:
-        st.session_state[format_key] = "old"
-    st.selectbox(
-        "PDF Format",
-        options=["old", "updated"],
-        index=0 if st.session_state[format_key] == "old" else 1,
-        key=format_key,
-        help="'old': 1 page = 1 unit; 'updated': 2 pages = 1 scene (text from first, image from second)."
-    )
+    st.session_state[format_key] = "updated"  # Always use updated
+    # UI selector commented out - only updated format supported
+    # st.selectbox(
+    #     "PDF Format",
+    #     options=["old", "updated"],
+    #     index=0 if st.session_state[format_key] == "old" else 1,
+    #     key=format_key,
+    #     help="'old': 1 page = 1 unit; 'updated': 2 pages = 1 scene (text from first, image from second)."
+    # )
     
     extraction_dir = get_extraction_dir(pdf_stem)
     confirm_key = f'{pdf_stem}_confirm_extract'

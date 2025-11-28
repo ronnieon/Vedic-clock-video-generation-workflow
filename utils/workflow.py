@@ -43,7 +43,7 @@ def get_workflow_status(pdf_stem: str) -> Dict:
     
     # Check extraction
     if extraction_dir.exists():
-        # Support both legacy page_XXXX and updated scene_XXXX units
+        # LEGACY FORMAT DISABLED: Only support scene_XXXX units (updated format)
         page_dirs = get_page_directories(pdf_stem)
         
         if len(page_dirs) > 0:
@@ -291,19 +291,21 @@ def get_workflow_status(pdf_stem: str) -> Dict:
 
 
 def get_page_directories(pdf_stem: str) -> List[Path]:
-    """Get sorted list of content unit directories (pages or scenes) for a PDF.
+    """Get sorted list of content unit directories (scenes) for a PDF.
 
-    If `scene_` directories are present (updated format), they take precedence.
-    Otherwise falls back to legacy `page_` directories.
+    LEGACY FORMAT DISABLED: Only returns scene_ directories (updated format).
+    Old page_ directories are ignored going forward.
     """
     extraction_dir = EXTRACTED_DIR / pdf_stem
     if not extraction_dir.exists():
         return []
     scene_dirs = [d for d in extraction_dir.iterdir() if d.is_dir() and d.name.startswith('scene_')]
-    if scene_dirs:
-        return sorted(scene_dirs)
-    page_dirs = [d for d in extraction_dir.iterdir() if d.is_dir() and d.name.startswith('page_')]
-    return sorted(page_dirs)
+    return sorted(scene_dirs)
+    # LEGACY FORMAT DISABLED - page_ directories no longer supported
+    # if scene_dirs:
+    #     return sorted(scene_dirs)
+    # page_dirs = [d for d in extraction_dir.iterdir() if d.is_dir() and d.name.startswith('page_')]
+    # return sorted(page_dirs)
 
 
 def get_extraction_dir(pdf_stem: str) -> Path:

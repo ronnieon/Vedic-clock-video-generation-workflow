@@ -34,7 +34,9 @@ except Exception:
     GENAI_AVAILABLE = False
     genai = None
 
-PAGE_DIR_PREFIX = "page_"
+# LEGACY FORMAT DISABLED - Only using scene-based format
+# PAGE_DIR_PREFIX = "page_"
+SCENE_DIR_PREFIX = "scene_"
 INPUT_FILENAME = "clean_text.txt"
 OUT_EN_FILENAME = "final_text_en.txt"
 OUT_HI_FILENAME = "final_text_hi.txt"
@@ -53,8 +55,10 @@ def list_pdf_dirs(root: Path) -> List[Path]:
     items: List[Path] = []
     for p in sorted(root.iterdir()):
         if p.is_dir():
-            has_page = any(child.is_dir() and child.name.startswith(PAGE_DIR_PREFIX) for child in p.iterdir())
-            if has_page:
+            # LEGACY FORMAT DISABLED - Only check for scene_ dirs
+            # has_page = any(child.is_dir() and child.name.startswith(PAGE_DIR_PREFIX) for child in p.iterdir())
+            has_scene = any(child.is_dir() and child.name.startswith(SCENE_DIR_PREFIX) for child in p.iterdir())
+            if has_scene:
                 items.append(p)
     return items
 
@@ -62,8 +66,11 @@ def list_pdf_dirs(root: Path) -> List[Path]:
 def list_pages(pdf_dir: Path) -> List[PageItem]:
     pages: List[PageItem] = []
     for child in sorted(pdf_dir.iterdir()):
-        if child.is_dir() and child.name.startswith(PAGE_DIR_PREFIX):
-            num_str = child.name[len(PAGE_DIR_PREFIX):]
+        # LEGACY FORMAT DISABLED - Only handle scene_ dirs
+        # if child.is_dir() and child.name.startswith(PAGE_DIR_PREFIX):
+        #     num_str = child.name[len(PAGE_DIR_PREFIX):]
+        if child.is_dir() and child.name.startswith(SCENE_DIR_PREFIX):
+            num_str = child.name[len(SCENE_DIR_PREFIX):]
             try:
                 idx = int(num_str)
             except ValueError:
