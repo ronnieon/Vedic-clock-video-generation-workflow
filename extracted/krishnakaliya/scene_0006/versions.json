@@ -1,0 +1,40 @@
+{
+  "en_text": {
+    "latest": "",
+    "versions": []
+  },
+  "hi_text": {
+    "latest": "",
+    "versions": []
+  },
+  "en_audio": {
+    "latest": "",
+    "versions": []
+  },
+  "hi_audio": {
+    "latest": "",
+    "versions": []
+  },
+  "image": {
+    "latest": "image_to_use_v1.png",
+    "versions": [
+      {
+        "file": "image_to_use_v1.png",
+        "created": "2025-11-28T22:26:27.442978",
+        "model": "unknown (migrated)"
+      }
+    ]
+  },
+  "image_video": {
+    "latest": "",
+    "versions": []
+  },
+  "en_video": {
+    "latest": "",
+    "versions": []
+  },
+  "hi_video": {
+    "latest": "",
+    "versions": []
+  }
+}
