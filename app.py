@@ -40,174 +40,174 @@ except Exception:
 from utils.logger import logger, log_user_action, get_current_log_file
 
 # ============================================================================
-# S3 SYNC FUNCTIONALITY - DISABLED
+# S3 SYNC FUNCTIONALITY
 # ============================================================================
 
-# def sync_to_s3():
-#     """
-#     Bidirectional sync between local directory and S3 bucket.
-#     - Downloads new files from S3 that don't exist locally
-#     - Uploads new/modified files from local to S3
-#     Runs continuously every 60 seconds in a background thread.
-#     """
-#     s3_bucket = "contentextract"
-#     s3_prefix = "extract/"
-#     local_dir = Path("extracted")
-#     
-#     # Initialize S3 client
-#     try:
-#         s3_client = boto3.client(
-#             's3',
-#             aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-#             aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-#             region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-south-1')
-#         )
-#         logger.info(f"S3 bidirectional sync initialized for {local_dir} <-> s3://{s3_bucket}/{s3_prefix}")
-#     except NoCredentialsError:
-#         logger.error("AWS credentials not found. S3 sync disabled.")
-#         return
-#     except Exception as e:
-#         logger.error(f"Failed to initialize S3 client: {e}")
-#         return
-#     
-#     while True:
-#         try:
-#             # Ensure local directory exists
-#             local_dir.mkdir(parents=True, exist_ok=True)
-#             
-#             files_downloaded = 0
-#             files_uploaded = 0
-#             files_skipped_download = 0
-#             files_skipped_upload = 0
-#             
-#             # ============================================================
-#             # STEP 1: Download files from S3 that don't exist locally
-#             # ============================================================
-#             try:
-#                 # List all objects in S3 bucket with the prefix
-#                 paginator = s3_client.get_paginator('list_objects_v2')
-#                 pages = paginator.paginate(Bucket=s3_bucket, Prefix=s3_prefix)
-#                 
-#                 for page in pages:
-#                     if 'Contents' not in page:
-#                         continue
-#                     
-#                     for obj in page['Contents']:
-#                         s3_key = obj['Key']
-#                         
-#                         # Skip directory markers
-#                         if s3_key.endswith('/'):
-#                             continue
-#                         
-#                         # Calculate local file path
-#                         relative_path = s3_key[len(s3_prefix):]
-#                         if not relative_path:
-#                             continue
-#                         
-#                         local_file = local_dir / relative_path
-#                         
-#                         # Only download if file doesn't exist locally
-#                         if local_file.exists():
-#                             # File already exists locally, skip download
-#                             files_skipped_download += 1
-#                             continue
-#                         
-#                         # File doesn't exist locally, download it
-#                         try:
-#                             # Create parent directories
-#                             local_file.parent.mkdir(parents=True, exist_ok=True)
-#                             
-#                             # Download file
-#                             s3_client.download_file(s3_bucket, s3_key, str(local_file))
-#                             files_downloaded += 1
-#                             logger.info(f"⬇️  Downloaded from S3: {relative_path}")
-#                         except Exception as e:
-#                             logger.error(f"Failed to download {s3_key}: {e}")
-#             
-#             except Exception as e:
-#                 logger.error(f"Error during S3 download phase: {e}")
-#             
-#             # ============================================================
-#             # STEP 2: Upload local files to S3
-#             # ============================================================
-#             try:
-#                 for file_path in local_dir.rglob('*'):
-#                     if file_path.is_file():
-#                         # Calculate relative path for S3 key
-#                         relative_path = file_path.relative_to(local_dir)
-#                         s3_key = f"{s3_prefix}{relative_path.as_posix()}"
-#                         
-#                         try:
-#                             # Check if file already exists in S3
-#                             try:
-#                                 s3_client.head_object(Bucket=s3_bucket, Key=s3_key)
-#                                 # File already exists in S3, skip upload
-#                                 files_skipped_upload += 1
-#                                 continue
-#                             except ClientError as e:
-#                                 if e.response['Error']['Code'] == '404':
-#                                     # File doesn't exist in S3, proceed with upload
-#                                     pass
-#                                 else:
-#                                     # Some other error, re-raise it
-#                                     raise
-#                             
-#                             # File doesn't exist in S3, upload it
-#                             s3_client.upload_file(
-#                                 str(file_path),
-#                                 s3_bucket,
-#                                 s3_key
-#                             )
-#                             files_uploaded += 1
-#                             logger.info(f"⬆️  Uploaded to S3: {relative_path}")
-#                         except ClientError as e:
-#                             logger.error(f"Failed to upload {file_path} to S3: {e}")
-#                         except Exception as e:
-#                             logger.error(f"Unexpected error uploading {file_path}: {e}")
-#             
-#             except Exception as e:
-#                 logger.error(f"Error during S3 upload phase: {e}")
-#             
-#             # Log summary (always log, even if everything was skipped)
-#             if files_downloaded > 0 or files_uploaded > 0:
-#                 logger.info(f"S3 sync completed: ⬇️  {files_downloaded} downloaded, ⬆️  {files_uploaded} uploaded, ⏭️  {files_skipped_download + files_skipped_upload} skipped")
-#             elif files_skipped_download > 0 or files_skipped_upload > 0:
-#                 # All files were skipped (already in sync)
-#                 logger.debug(f"S3 sync: All files in sync (⏭️  {files_skipped_download + files_skipped_upload} files already exist)")
-#             
-#             # ============================================================
-#             # STEP 3: Discover and register externally-created versions
-#             # ============================================================
-#             # After syncing files, check if any new versions exist on disk
-#             # that aren't registered in versions.json (e.g., from background processor)
-#             try:
-#                 from utils.versioning import create_new_version, get_version_count, migrate_legacy_files, cleanup_all_old_versions, discover_all_versions
-#                 
-#                 discovered_count = discover_all_versions(local_dir)
-#                 if discovered_count > 0:
-#                     logger.info(f"🔍 Discovered and registered {discovered_count} new version(s) from external sources")
-#             except Exception as e:
-#                 logger.error(f"Error during version discovery: {e}")
-#             
-#         except Exception as e:
-#             logger.error(f"Error during S3 sync: {e}")
-#         
-#         # Wait 60 seconds before next sync
-#         time.sleep(60)
+def sync_to_s3():
+    """
+    Bidirectional sync between local directory and S3 bucket.
+    - Downloads new files from S3 that don't exist locally
+    - Uploads new/modified files from local to S3
+    Runs continuously every 60 seconds in a background thread.
+    """
+    s3_bucket = "contentextract"
+    s3_prefix = "extract/"
+    local_dir = Path("extracted")
+    
+    # Initialize S3 client
+    try:
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            region_name=os.getenv('AWS_DEFAULT_REGION', 'ap-south-1')
+        )
+        logger.info(f"S3 bidirectional sync initialized for {local_dir} <-> s3://{s3_bucket}/{s3_prefix}")
+    except NoCredentialsError:
+        logger.error("AWS credentials not found. S3 sync disabled.")
+        return
+    except Exception as e:
+        logger.error(f"Failed to initialize S3 client: {e}")
+        return
+    
+    while True:
+        try:
+            # Ensure local directory exists
+            local_dir.mkdir(parents=True, exist_ok=True)
+            
+            files_downloaded = 0
+            files_uploaded = 0
+            files_skipped_download = 0
+            files_skipped_upload = 0
+            
+            # ============================================================
+            # STEP 1: Download files from S3 that don't exist locally
+            # ============================================================
+            try:
+                # List all objects in S3 bucket with the prefix
+                paginator = s3_client.get_paginator('list_objects_v2')
+                pages = paginator.paginate(Bucket=s3_bucket, Prefix=s3_prefix)
+                
+                for page in pages:
+                    if 'Contents' not in page:
+                        continue
+                    
+                    for obj in page['Contents']:
+                        s3_key = obj['Key']
+                        
+                        # Skip directory markers
+                        if s3_key.endswith('/'):
+                            continue
+                        
+                        # Calculate local file path
+                        relative_path = s3_key[len(s3_prefix):]
+                        if not relative_path:
+                            continue
+                        
+                        local_file = local_dir / relative_path
+                        
+                        # Only download if file doesn't exist locally
+                        if local_file.exists():
+                            # File already exists locally, skip download
+                            files_skipped_download += 1
+                            continue
+                        
+                        # File doesn't exist locally, download it
+                        try:
+                            # Create parent directories
+                            local_file.parent.mkdir(parents=True, exist_ok=True)
+                            
+                            # Download file
+                            s3_client.download_file(s3_bucket, s3_key, str(local_file))
+                            files_downloaded += 1
+                            logger.info(f"⬇️  Downloaded from S3: {relative_path}")
+                        except Exception as e:
+                            logger.error(f"Failed to download {s3_key}: {e}")
+            
+            except Exception as e:
+                logger.error(f"Error during S3 download phase: {e}")
+            
+            # ============================================================
+            # STEP 2: Upload local files to S3
+            # ============================================================
+            try:
+                for file_path in local_dir.rglob('*'):
+                    if file_path.is_file():
+                        # Calculate relative path for S3 key
+                        relative_path = file_path.relative_to(local_dir)
+                        s3_key = f"{s3_prefix}{relative_path.as_posix()}"
+                        
+                        try:
+                            # Check if file already exists in S3
+                            try:
+                                s3_client.head_object(Bucket=s3_bucket, Key=s3_key)
+                                # File already exists in S3, skip upload
+                                files_skipped_upload += 1
+                                continue
+                            except ClientError as e:
+                                if e.response['Error']['Code'] == '404':
+                                    # File doesn't exist in S3, proceed with upload
+                                    pass
+                                else:
+                                    # Some other error, re-raise it
+                                    raise
+                            
+                            # File doesn't exist in S3, upload it
+                            s3_client.upload_file(
+                                str(file_path),
+                                s3_bucket,
+                                s3_key
+                            )
+                            files_uploaded += 1
+                            logger.info(f"⬆️  Uploaded to S3: {relative_path}")
+                        except ClientError as e:
+                            logger.error(f"Failed to upload {file_path} to S3: {e}")
+                        except Exception as e:
+                            logger.error(f"Unexpected error uploading {file_path}: {e}")
+            
+            except Exception as e:
+                logger.error(f"Error during S3 upload phase: {e}")
+            
+            # Log summary (always log, even if everything was skipped)
+            if files_downloaded > 0 or files_uploaded > 0:
+                logger.info(f"S3 sync completed: ⬇️  {files_downloaded} downloaded, ⬆️  {files_uploaded} uploaded, ⏭️  {files_skipped_download + files_skipped_upload} skipped")
+            elif files_skipped_download > 0 or files_skipped_upload > 0:
+                # All files were skipped (already in sync)
+                logger.debug(f"S3 sync: All files in sync (⏭️  {files_skipped_download + files_skipped_upload} files already exist)")
+            
+            # ============================================================
+            # STEP 3: Discover and register externally-created versions
+            # ============================================================
+            # After syncing files, check if any new versions exist on disk
+            # that aren't registered in versions.json (e.g., from background processor)
+            try:
+                from utils.versioning import create_new_version, get_version_count, migrate_legacy_files, cleanup_all_old_versions, discover_all_versions
+                
+                discovered_count = discover_all_versions(local_dir)
+                if discovered_count > 0:
+                    logger.info(f"🔍 Discovered and registered {discovered_count} new version(s) from external sources")
+            except Exception as e:
+                logger.error(f"Error during version discovery: {e}")
+            
+        except Exception as e:
+            logger.error(f"Error during S3 sync: {e}")
+        
+        # Wait 60 seconds before next sync
+        time.sleep(60)
 
-# def start_s3_sync_thread():
-#     """
-#     Start the S3 sync thread in daemon mode.
-#     This ensures the thread stops when the main application exits.
-#     """
-#     sync_thread = threading.Thread(target=sync_to_s3, daemon=True)
-#     sync_thread.start()
-#     logger.info("S3 sync thread started (syncing every 60 seconds)")
+def start_s3_sync_thread():
+    """
+    Start the S3 sync thread in daemon mode.
+    This ensures the thread stops when the main application exits.
+    """
+    sync_thread = threading.Thread(target=sync_to_s3, daemon=True)
+    sync_thread.start()
+    logger.info("S3 sync thread started (syncing every 60 seconds)")
 
-# Start S3 sync when the app loads - DISABLED
-# if 's3_sync_started' not in st.session_state:
-#     start_s3_sync_thread()
-#     st.session_state.s3_sync_started = True
+# Start S3 sync when the app loads
+if 's3_sync_started' not in st.session_state:
+    start_s3_sync_thread()
+    st.session_state.s3_sync_started = True
 
 
 
